@@ -15,8 +15,8 @@ import warnings
 from datetime import datetime, timedelta
 from multiprocessing import Process
 
-from dateutil import zoneinfo
 import pytz
+from dateutil import zoneinfo
 
 try:
     from io import BytesIO, StringIO
@@ -34,7 +34,9 @@ from django.test import TestCase
 from django.test.client import Client
 from django.utils import timezone
 
-from chroniker import constants as c, settings as _settings, utils
+from chroniker import constants as c
+from chroniker import settings as _settings
+from chroniker import utils
 from chroniker.models import Job, Log
 
 warnings.simplefilter('error', RuntimeWarning)
@@ -368,7 +370,7 @@ class JobTestCase(TestCase):
         j.frequency = "MINUTELY"
         j.enabled = True
         j.params = "interval:10"
-        j.next_run = datetime(2014, 6, 27, 14, 31, 4)
+        j.next_run = datetime(2014, 6, 27, 14, 31, 4, 0, datetime.now().astimezone().tzinfo)
         j.save()
 
         # Test someone turning-on timezone awareness after job was created.
@@ -382,7 +384,7 @@ class JobTestCase(TestCase):
             self.assertTrue(j.next_run)
             settings.USE_TZ = True
             j.params = "interval:10"
-            j.next_run = datetime(2014, 6, 27, 14, 31, 4)
+            j.next_run = datetime(2014, 6, 27, 14, 31, 4, datetime.now().astimezone().tzinfo)
             j.save()
         finally:
             settings.USE_TZ = True
@@ -708,4 +710,5 @@ class JobTestCase(TestCase):
 
     def test_widgets(self):
         print('django.version:', django.VERSION)
-        from chroniker import widgets # pylint: disable=unused-import,import-outside-toplevel
+        from chroniker import \
+            widgets  # pylint: disable=unused-import,import-outside-toplevel

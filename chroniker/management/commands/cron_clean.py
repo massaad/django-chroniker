@@ -7,15 +7,15 @@ from chroniker.models import Log
 
 
 class Command(BaseCommand):
-    help = 'Deletes old job logs.'
+    help = "Deletes old job logs."
 
     def add_arguments(self, parser):
-        parser.add_argument('unit', choices=['minutes', 'hours', 'days', 'weeks'])
-        parser.add_argument('amount', type=int)
+        parser.add_argument("unit", choices=["minutes", "hours", "days", "weeks"])
+        parser.add_argument("amount", type=int)
 
     def handle(self, *args, **options):
-        unit = options['unit']
-        amount = options['amount']
+        unit = options["unit"]
+        amount = options["amount"]
         kwargs = {unit: amount}
         time_ago = timezone.now() - timedelta(**kwargs)
         Log.cleanup(time_ago)

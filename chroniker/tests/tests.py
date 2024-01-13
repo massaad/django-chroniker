@@ -39,35 +39,33 @@ from chroniker import settings as _settings
 from chroniker import utils
 from chroniker.models import Job, Log
 
-warnings.simplefilter('error', RuntimeWarning)
+warnings.simplefilter("error", RuntimeWarning)
 
-socket.gethostname = lambda: 'localhost'
+socket.gethostname = lambda: "localhost"
 
 CALLBACK_ERRORS = []
 
 
 def job_error_callback(job, stdout, stderr):
-    print('Error for job %s' % job)
+    print("Error for job %s" % job)
     print(stderr, file=sys.stderr)
     CALLBACK_ERRORS.append(stderr)
 
 
 class JobProcess(Process):
-
     def run(self):
-        print('Job process started.')
+        print("Job process started.")
         while 1:
-            print('Job process waiting (pid=%i)...' % (os.getpid(),))
+            print("Job process waiting (pid=%i)..." % (os.getpid(),))
             time.sleep(1)
-        print('Job process stopped.')
+        print("Job process stopped.")
 
 
 class JobTestCase(TestCase):
+    fixtures = ["test_jobs.json"]
 
-    fixtures = ['test_jobs.json']
-
-    username = 'joe'
-    password = 'password'
+    username = "joe"
+    password = "password"
 
     def setUp(self):
         pass
@@ -75,7 +73,7 @@ class JobTestCase(TestCase):
     def get_superuser(self):
         user = User.objects.create(
             username=self.username,
-            email='joe@joe.com',
+            email="joe@joe.com",
             is_active=True,
             is_staff=True,
             is_superuser=True,
@@ -105,9 +103,9 @@ class JobTestCase(TestCase):
                 continue
 
             time_start = time.time()
-            #TODO:heartbeat thread can't access sqlite3 models?
-            #Throws "DatabaseError: no such table: chroniker_job".
-            #Causes django-admin.py to consume 100% cpu?
+            # TODO:heartbeat thread can't access sqlite3 models?
+            # Throws "DatabaseError: no such table: chroniker_job".
+            # Causes django-admin.py to consume 100% cpu?
             job.run(update_heartbeat=0)
             time_end = time.time()
 
@@ -119,7 +117,9 @@ class JobTestCase(TestCase):
 
         # Confirm we can view the logs.
         client, user = self.get_superuser_client()
-        response = client.get('/admin/chroniker/log/%i/change/' % Log.objects.all().first().id)
+        response = client.get(
+            "/admin/chroniker/log/%i/change/" % Log.objects.all().first().id
+        )
         self.assertEqual(response.status_code, 200)
 
     def testCronCommand(self):
@@ -128,15 +128,17 @@ class JobTestCase(TestCase):
         """
 
         # Pick the longest running Job
-        job = sorted(Job.objects.due().filter(command="test_sleeper"), key=lambda j: -int(j.args))[0]
+        job = sorted(
+            Job.objects.due().filter(command="test_sleeper"), key=lambda j: -int(j.args)
+        )[0]
 
         # The "args" property simply describes the number of seconds the Job
         # should take to run
         time_expected = float(job.args)
 
         time_start = time.time()
-        #call_command('cron', update_heartbeat=0)
-        call_command('run_job', job.id, update_heartbeat=0)
+        # call_command('cron', update_heartbeat=0)
+        call_command("run_job", job.id, update_heartbeat=0)
         time_end = time.time()
 
         time_taken = time_end - time_start
@@ -147,7 +149,9 @@ class JobTestCase(TestCase):
         Test that the ``cron_clean`` command runs properly.
         """
         # Pick the shortest running Job
-        job = sorted(Job.objects.due().filter(command="test_sleeper"), key=lambda j: int(j.args))[0]
+        job = sorted(
+            Job.objects.due().filter(command="test_sleeper"), key=lambda j: int(j.args)
+        )[0]
 
         # Run the job 5 times
         for i in range(5):
@@ -158,10 +162,10 @@ class JobTestCase(TestCase):
 
         # Ensure we can convert a log instances to unicode.
         s = str(Log.objects.all()[0])
-        self.assertTrue(s.startswith('Sleep '), s)
+        self.assertTrue(s.startswith("Sleep "), s)
 
         # Now clean out the logs that are older than 0 minutes (all of them)
-        #call_command('cron_clean', 'minutes', '0')
+        # call_command('cron_clean', 'minutes', '0')
         Log.cleanup()
 
         # Ensure that we have 0 Log objects
@@ -180,9 +184,9 @@ class JobTestCase(TestCase):
         # 3 comes before 2
         # 4 comes before 3
         j1 = Job.objects.get(id=1)
-        j2 = Job.objects.get(id=2) # needs j1 and j3
+        j2 = Job.objects.get(id=2)  # needs j1 and j3
         self.assertEqual(j2.dependencies.all().count(), 2)
-        j3 = Job.objects.get(id=3) # need j4
+        j3 = Job.objects.get(id=3)  # need j4
         self.assertEqual(j3.dependencies.all().count(), 1)
         j4 = Job.objects.get(id=4)
         j5 = Job.objects.get(id=5)
@@ -208,7 +212,7 @@ class JobTestCase(TestCase):
         jobs = Job.objects.ordered_by_dependencies(Job.objects.filter(enabled=True))
         #        for job in jobs:
         #            print(job, [_.dependee for _ in job.dependencies.all()])
-        print('jobs1:', [_.id for _ in jobs])
+        print("jobs1:", [_.id for _ in jobs])
 
         # 1 comes before 2
         self.assertTrue(jobs.index(j1) < jobs.index(j2))
@@ -221,7 +225,7 @@ class JobTestCase(TestCase):
 
         # Ensure all dependent jobs come after their dependee job.
         due = Job.objects.due_with_met_dependencies_ordered()
-        print('dueA:', [_.id for _ in due])
+        print("dueA:", [_.id for _ in due])
 
         # 1 comes before 2
         self.assertTrue(due.index(j1) < jobs.index(j2))
@@ -237,7 +241,7 @@ class JobTestCase(TestCase):
         # e.g. Even though it appears to correctly run the job,
         # querying the job's next_run date will show the old original date.
         # As a workaround for testing, we just run them all directly.
-        #call_command('cron', update_heartbeat=0)
+        # call_command('cron', update_heartbeat=0)
         for job in due:
             job.run(update_heartbeat=0)
 
@@ -246,12 +250,12 @@ class JobTestCase(TestCase):
         Job.objects.update(is_running=False, last_heartbeat=timezone.now())
         Job.objects.update()
         due = list(Job.objects.due_with_met_dependencies())
-        print('dueB:', due)
+        print("dueB:", due)
         self.assertEqual(
             due,
             [
-                #Job.objects.get(args="5"),
-            ]
+                # Job.objects.get(args="5"),
+            ],
         )
 
         for job in due:
@@ -259,12 +263,12 @@ class JobTestCase(TestCase):
 
         Job.objects.update()
         due = list(Job.objects.due_with_met_dependencies())
-        print('dueC:', due)
+        print("dueC:", due)
         self.assertEqual(
             due,
             [
-                #Job.objects.get(args="2"),
-            ]
+                # Job.objects.get(args="2"),
+            ],
         )
 
     def testStaleCleanup(self):
@@ -326,9 +330,8 @@ class JobTestCase(TestCase):
                 break
 
     def testJobRawCommand(self):
-
         job = Job.objects.create(
-            name='raw command test',
+            name="raw command test",
             frequency=c.MINUTELY,
             raw_command='echo "hello"',
             enabled=True,
@@ -339,9 +342,9 @@ class JobTestCase(TestCase):
         self.assertEqual(job.logs.all().count(), 1)
 
         stdout_str = Log.objects.get(id=1).stdout
-        self.assertEqual(stdout_str, 'hello\n')
+        self.assertEqual(stdout_str, "hello\n")
         stderr_str = Log.objects.get(id=1).stderr
-        self.assertEqual(stderr_str, '')
+        self.assertEqual(stderr_str, "")
 
         # Disable logging.
         Job.objects.update()
@@ -358,19 +361,18 @@ class JobTestCase(TestCase):
 
         # Confirm nothing was logged.
         stdout_str = Log.objects.get(id=2).stdout
-        self.assertEqual(stdout_str, '')
+        self.assertEqual(stdout_str, "")
         stderr_str = Log.objects.get(id=2).stderr
-        self.assertEqual(stderr_str, '')
+        self.assertEqual(stderr_str, "")
 
     def testTimezone(self):
-
         self.assertEqual(settings.USE_TZ, True)
         j = Job()
         j.command = "test_sleeper"
         j.frequency = "MINUTELY"
         j.enabled = True
         j.params = "interval:10"
-        j.next_run = datetime(2014, 6, 27, 14, 31, 4, 0, datetime.now().astimezone().tzinfo)
+        j.next_run = datetime(2014, 6, 27, 14, 31, 4, 0)
         j.save()
 
         # Test someone turning-on timezone awareness after job was created.
@@ -384,7 +386,7 @@ class JobTestCase(TestCase):
             self.assertTrue(j.next_run)
             settings.USE_TZ = True
             j.params = "interval:10"
-            j.next_run = datetime(2014, 6, 27, 14, 31, 4, datetime.now().astimezone().tzinfo)
+            j.next_run = datetime(2014, 6, 27, 14, 31, 4)
             j.save()
         finally:
             settings.USE_TZ = True
@@ -400,14 +402,14 @@ class JobTestCase(TestCase):
 
             j = Job.objects.get(id=1)
             next_run = j.next_run
-            print('next_run:', next_run)
+            print("next_run:", next_run)
             self.assertTrue(timezone.is_naive(next_run))
             with self.assertRaises(ValueError):
-                #astimezone() cannot be applied to a naive datetime
+                # astimezone() cannot be applied to a naive datetime
                 timezone.make_naive(j.next_run, timezone=tz)
             j.save()
 
-            response = client.get('/admin/chroniker/job/')
+            response = client.get("/admin/chroniker/job/")
             self.assertEqual(response.status_code, 200)
 
         finally:
@@ -420,27 +422,42 @@ class JobTestCase(TestCase):
 
     def testNaturalKey(self):
         if django.VERSION[:3] <= (1, 5, 0):
-            #TODO: support other versions once admin-steroids updated
+            # TODO: support other versions once admin-steroids updated
 
             Job.objects.all().delete()
 
-            _settings.CHRONIKER_JOB_NK = ('name',)
-            call_command('loaddatanaturally', 'chroniker/tests/fixtures/jobs_by_name.json', traceback=True, verbosity=1)
+            _settings.CHRONIKER_JOB_NK = ("name",)
+            call_command(
+                "loaddatanaturally",
+                "chroniker/tests/fixtures/jobs_by_name.json",
+                traceback=True,
+                verbosity=1,
+            )
             qs = Job.objects.all()
             # There are 3 jobs, but only 2 with unique names, so only two should have been created.
             self.assertEqual(qs.count(), 2)
 
             Job.objects.all().delete()
 
-            _settings.CHRONIKER_JOB_NK = ('command',)
-            call_command('loaddatanaturally', 'chroniker/tests/fixtures/jobs_by_command.json', traceback=True, verbosity=1)
+            _settings.CHRONIKER_JOB_NK = ("command",)
+            call_command(
+                "loaddatanaturally",
+                "chroniker/tests/fixtures/jobs_by_command.json",
+                traceback=True,
+                verbosity=1,
+            )
             qs = Job.objects.all()
             self.assertEqual(qs.count(), 2)
 
             Job.objects.all().delete()
 
-            _settings.CHRONIKER_JOB_NK = ('command', 'args')
-            call_command('loaddatanaturally', 'chroniker/tests/fixtures/jobs_by_command_args.json', traceback=True, verbosity=1)
+            _settings.CHRONIKER_JOB_NK = ("command", "args")
+            call_command(
+                "loaddatanaturally",
+                "chroniker/tests/fixtures/jobs_by_command_args.json",
+                traceback=True,
+                verbosity=1,
+            )
             qs = Job.objects.all()
             self.assertEqual(qs.count(), 3)
 
@@ -457,23 +474,22 @@ class JobTestCase(TestCase):
             for stdout_cls in (BytesIO, StringIO):
                 stdout = stdout_cls()
                 try:
-                    call_command('migrate', 'chroniker', traceback=True, stdout=stdout)
+                    call_command("migrate", "chroniker", traceback=True, stdout=stdout)
                 except TypeError:
                     continue
                 ran = True
                 stdout.seek(0)
                 stdout = stdout.read()
-                print('ret:', stdout)
-                self.assertFalse('Your models have changes' in stdout)
+                print("ret:", stdout)
+                self.assertFalse("Your models have changes" in stdout)
                 break
             self.assertTrue(ran)
         else:
             stdout = StringIO()
-            call_command('migrate', 'chroniker', traceback=True, stdout=stdout)
-            self.assertIn('No migrations to apply', stdout.getvalue())
+            call_command("migrate", "chroniker", traceback=True, stdout=stdout)
+            self.assertIn("No migrations to apply", stdout.getvalue())
 
     def testErrorCallback(self):
-
         job = Job.objects.all().update(enabled=False)
 
         while CALLBACK_ERRORS:
@@ -487,8 +503,8 @@ class JobTestCase(TestCase):
         job.save()
 
         self.assertEqual(job.logs.all().count(), 0)
-        #job.run(update_heartbeat=0)
-        call_command('cron', update_heartbeat=0, sync=1)
+        # job.run(update_heartbeat=0)
+        call_command("cron", update_heartbeat=0, sync=1)
         self.assertEqual(job.logs.all().count(), 1)
         self.assertEqual(len(CALLBACK_ERRORS), 1)
 
@@ -498,11 +514,13 @@ class JobTestCase(TestCase):
             job = Job.objects.get(id=6)
             job.force_run = True
             job.save()
-            call_command('cron', update_heartbeat=0, sync=1)
+            call_command("cron", update_heartbeat=0, sync=1)
         for log in job.logs.all():
-            print('log1:', log.id, log)
+            print("log1:", log.id, log)
         self.assertEqual(job.logs.all().count(), 11)
-        max_dt0 = job.logs.all().aggregate(Max('run_start_datetime'))['run_start_datetime__max']
+        max_dt0 = job.logs.all().aggregate(Max("run_start_datetime"))[
+            "run_start_datetime__max"
+        ]
 
         # Set max log entries to very low number, and confirm all old log entries are deleted.
         Job.objects.update()
@@ -510,19 +528,20 @@ class JobTestCase(TestCase):
         job.force_run = True
         job.maximum_log_entries = 3
         job.save()
-        call_command('cron', update_heartbeat=0, sync=1)
+        call_command("cron", update_heartbeat=0, sync=1)
         Job.objects.update()
         Log.objects.update()
         for log in job.logs.all():
-            print('log2:', log.id, log)
+            print("log2:", log.id, log)
         self.assertEqual(job.logs.all().count(), 3)
-        max_dt1 = job.logs.all().aggregate(Max('run_start_datetime'))['run_start_datetime__max']
-        print('max_dt0:', max_dt0)
-        print('max_dt1:', max_dt1)
+        max_dt1 = job.logs.all().aggregate(Max("run_start_datetime"))[
+            "run_start_datetime__max"
+        ]
+        print("max_dt0:", max_dt0)
+        print("max_dt1:", max_dt1)
         self.assertTrue(max_dt1 > max_dt0)
 
     def testCronQueue(self):
-
         jobs = Job.objects.all()
         self.assertEqual(jobs.count(), 6)
         Job.objects.all().update(enabled=False)
@@ -531,8 +550,8 @@ class JobTestCase(TestCase):
         self.assertEqual(logs.count(), 0)
 
         job = Job.objects.create(
-            name='test',
-            raw_command='ls',
+            name="test",
+            raw_command="ls",
             enabled=True,
             force_run=True,
             log_stdout=True,
@@ -542,7 +561,7 @@ class JobTestCase(TestCase):
         time_start = time.time()
         # Note, if we run cron asynchronously, this breaks the transactions in Sqlite
         # and stops us from seeing model changes.
-        call_command('cron', update_heartbeat=0, sync=1)
+        call_command("cron", update_heartbeat=0, sync=1)
         time_end = time.time()
 
         Log.objects.update()
@@ -553,20 +572,19 @@ class JobTestCase(TestCase):
         job = Job.objects.get(id=job.id)
         logs = job.logs.all()
         self.assertEqual(logs.count(), 1)
-        print('logs[0].stderr:', logs[0].stderr)
-        self.assertEqual(len(logs[0].stderr), len(''))
+        print("logs[0].stderr:", logs[0].stderr)
+        self.assertEqual(len(logs[0].stderr), len(""))
         print(logs[0].stdout)
         print(logs[0].stderr)
         self.assertEqual(job.last_run_successful, True)
         self.assertTrue(job.last_run_start_timestamp)
 
     def testHourly(self):
-
         Job.objects.all().delete()
 
         job = Job.objects.create(
-            name='test',
-            raw_command='ls',
+            name="test",
+            raw_command="ls",
             frequency=c.HOURLY,
             enabled=True,
             force_run=True,
@@ -576,20 +594,20 @@ class JobTestCase(TestCase):
         self.assertEqual(job.logs.all().count(), 0)
         self.assertTrue(job.next_run)
         next_run0 = job.next_run.astimezone(pytz.utc)
-        print('next_run0:', next_run0)
+        print("next_run0:", next_run0)
         self.assertTrue(timezone.is_aware(next_run0))
-        self.assertEqual(next_run0.tzname(), 'UTC')
+        self.assertEqual(next_run0.tzname(), "UTC")
 
         # Initial next_run should be one-hour from now.
         td = next_run0 - timezone.now().astimezone(pytz.utc)
-        print('td:', td)
+        print("td:", td)
         result = abs(td.total_seconds() - 3600)
         self.assertTrue(result <= 5, result)
 
-        call_command('cron', update_heartbeat=0, sync=1)
+        call_command("cron", update_heartbeat=0, sync=1)
 
-        print('stdout:', job.logs.all()[0].stdout)
-        print('stderr:', job.logs.all()[0].stderr)
+        print("stdout:", job.logs.all()[0].stdout)
+        print("stderr:", job.logs.all()[0].stderr)
         self.assertEqual(job.logs.all()[0].success, True)
 
         Job.objects.update()
@@ -599,33 +617,33 @@ class JobTestCase(TestCase):
         self.assertTrue(job.next_run)
         self.assertEqual(job.logs.all().count(), 1)
         next_run1 = job.next_run.astimezone(pytz.utc)
-        print('next_run1:', next_run1)
-        print('now:', timezone.now().astimezone(pytz.utc))
+        print("next_run1:", next_run1)
+        print("now:", timezone.now().astimezone(pytz.utc))
         self.assertTrue(timezone.is_aware(next_run1))
         # All datetimes get normalized to UTC in the database.
-        self.assertEqual(next_run1.tzname(), 'UTC')
+        self.assertEqual(next_run1.tzname(), "UTC")
 
         # Force run should have left the next_run unchanged.
-        td = (next_run1 - next_run0) #.total_seconds()
-        print('td:', td)
+        td = next_run1 - next_run0  # .total_seconds()
+        print("td:", td)
         self.assertEqual(td.total_seconds(), 0)
 
         job.next_run = timezone.now() - timedelta(seconds=3600)
         job.save()
         self.assertEqual(job.is_due(), True)
 
-        call_command('cron', update_heartbeat=0, sync=1)
+        call_command("cron", update_heartbeat=0, sync=1)
 
         # The job should have been automatically scheduled to run an hour later.
         Job.objects.update()
         job = Job.objects.get(id=job.id)
         self.assertEqual(job.logs.all().count(), 2)
         next_run2 = job.next_run.astimezone(pytz.utc)
-        print('next_run0:', next_run0)
-        print('next_run2:', next_run2)
-        #self.assertTrue(td.total_seconds())
-        td2 = (next_run2 - timezone.now().astimezone(pytz.utc))
-        print('td2:', td2)
+        print("next_run0:", next_run0)
+        print("next_run2:", next_run2)
+        # self.assertTrue(td.total_seconds())
+        td2 = next_run2 - timezone.now().astimezone(pytz.utc)
+        print("td2:", td2)
         self.assertTrue(abs(td2.total_seconds() - 3600) <= 5)
 
     def testMarkRunning(self):
@@ -634,20 +652,21 @@ class JobTestCase(TestCase):
             job = Job.objects.get(id=1)
             job.mark_running()
             self.assertEqual(job.is_stale(), False)
-            timezone.now = lambda: _now() + timedelta(minutes=_settings.CHRONIKER_STALE_MINUTES * 2)
+            timezone.now = lambda: _now() + timedelta(
+                minutes=_settings.CHRONIKER_STALE_MINUTES * 2
+            )
             self.assertEqual(job.is_stale(), True)
         finally:
             timezone.now = _now
 
     def testJobFailure(self):
-
-        user = User.objects.create(username='admin', email='admin@localhost')
+        user = User.objects.create(username="admin", email="admin@localhost")
 
         # Create a job that should fail and send an error email.
         Job.objects.all().delete()
         job = Job.objects.create(
-            name='test error',
-            command='test_error',
+            name="test error",
+            command="test_error",
             frequency=c.HOURLY,
             enabled=True,
             force_run=True,
@@ -662,24 +681,27 @@ class JobTestCase(TestCase):
         self.assertEqual(Log.objects.all().count(), 0)
 
         # Run job.
-        call_command('cron', update_heartbeat=0, sync=1)
+        call_command("cron", update_heartbeat=0, sync=1)
 
         # Confirm an error email was sent.
         self.assertEqual(len(mail.outbox), 1)
-        #print(mail.outbox[0].body)
+        # print(mail.outbox[0].body)
         Job.objects.update()
         job = Job.objects.get(id=job.id)
         self.assertEqual(job.logs.all().count(), 1)
-        print('log.id:', job.logs.all()[0].id)
-        self.assertEqual(len(job.logs.all()[0].stdout), len(''))
-        self.assertEqual(job.logs.all()[0].stderr, 'Something went wrong (but not really, this is just a test).\n')
+        print("log.id:", job.logs.all()[0].id)
+        self.assertEqual(len(job.logs.all()[0].stdout), len(""))
+        self.assertEqual(
+            job.logs.all()[0].stderr,
+            "Something went wrong (but not really, this is just a test).\n",
+        )
         self.assertEqual(job.last_run_successful, False)
 
         # Create a job that should succeed and not send an error email.
         Job.objects.all().delete()
         job = Job.objects.create(
-            name='test success',
-            command='test_success',
+            name="test success",
+            command="test_success",
             frequency=c.HOURLY,
             enabled=True,
             force_run=True,
@@ -695,7 +717,7 @@ class JobTestCase(TestCase):
         self.assertEqual(Log.objects.all().count(), 0)
 
         # Run job.
-        call_command('cron', update_heartbeat=0, sync=1)
+        call_command("cron", update_heartbeat=0, sync=1)
 
         # Confirm an error email was not sent.
         if mail.outbox:
@@ -704,11 +726,10 @@ class JobTestCase(TestCase):
         Job.objects.update()
         job = Job.objects.get(id=job.id)
         self.assertEqual(job.logs.all().count(), 1)
-        self.assertEqual(job.logs.all()[0].stdout, 'Everything is ok.\n')
-        self.assertEqual(len(job.logs.all()[0].stderr), len(''))
+        self.assertEqual(job.logs.all()[0].stdout, "Everything is ok.\n")
+        self.assertEqual(len(job.logs.all()[0].stderr), len(""))
         self.assertEqual(job.last_run_successful, True)
 
     def test_widgets(self):
-        print('django.version:', django.VERSION)
-        from chroniker import \
-            widgets  # pylint: disable=unused-import,import-outside-toplevel
+        print("django.version:", django.VERSION)
+        from chroniker import widgets  # pylint: disable=unused-import,import-outside-toplevel

@@ -6,20 +6,20 @@ from chroniker.models import Job
 
 
 class Command(BaseCommand):
-
-    help = 'Runs a specific job. The job will only run if it is not currently running.'
+    help = "Runs a specific job. The job will only run if it is not currently running."
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs="*", help='job.id')
-        parser.add_argument('--update_heartbeat',
-            dest='update_heartbeat',
+        parser.add_argument("args", nargs="*", help="job.id")
+        parser.add_argument(
+            "--update_heartbeat",
+            dest="update_heartbeat",
             default=1,
-            help='If given, launches a thread to asynchronously update ' + \
-                'job heartbeat status.')
+            help="If given, launches a thread to asynchronously update "
+            + "job heartbeat status.",
+        )
 
     def handle(self, *args, **options):
         for job_id in args:
-
             try:
                 job = Job.objects.get(pk=int(job_id))
             except Job.DoesNotExist:
@@ -27,5 +27,5 @@ class Command(BaseCommand):
                 return
 
             # Run the job and wait for it to finish
-            print('Attempting to run job %i...' % (job.id,))
-            job.handle_run(update_heartbeat=int(options['update_heartbeat']))
+            print("Attempting to run job %i..." % (job.id,))
+            job.handle_run(update_heartbeat=int(options["update_heartbeat"]))

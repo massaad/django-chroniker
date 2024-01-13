@@ -2,15 +2,14 @@ from datetime import datetime, timedelta
 
 from django import template
 from django.conf import settings
-from django.urls import reverse, NoReverseMatch
-from django.utils import timezone
 from django.template.defaultfilters import date
+from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 
 register = template.Library()
 
 
 class RunJobURLNode(template.Node):
-
     def __init__(self, object_id):
         self.object_id = template.Variable(object_id)
 
@@ -18,10 +17,10 @@ class RunJobURLNode(template.Node):
         object_id = self.object_id.resolve(context)
         try:
             # Old way
-            url = reverse('chroniker_job_run', args=(object_id,))
+            url = reverse("chroniker_job_run", args=(object_id,))
         except NoReverseMatch:
             # New way
-            url = reverse('admin:chroniker_job_run', args=(object_id,))
+            url = reverse("admin:chroniker_job_run", args=(object_id,))
         return url
 
 
@@ -37,11 +36,13 @@ def do_get_run_job_url(parser, token):
         # Splitting by None == splitting by spaces.
         tag_name, object_id = token.contents.split(None, 1)
     except ValueError as exc:
-        raise template.TemplateSyntaxError("%r tag requires one argument" % token.contents.split()[0]) from exc
+        raise template.TemplateSyntaxError(
+            "%r tag requires one argument" % token.contents.split()[0]
+        ) from exc
     return RunJobURLNode(object_id)
 
 
-register.tag('get_run_job_url', do_get_run_job_url)
+register.tag("get_run_job_url", do_get_run_job_url)
 
 
 @register.simple_tag

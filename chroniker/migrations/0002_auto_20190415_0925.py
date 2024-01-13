@@ -5,16 +5,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('chroniker', '0001_initial'),
+        ("chroniker", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='job',
-            name='subscribers',
-            field=models.ManyToManyField(blank=True, limit_choices_to={'is_staff': True}, related_name='subscribed_jobs', to=settings.AUTH_USER_MODEL),
+            model_name="job",
+            name="subscribers",
+            field=models.ManyToManyField(
+                blank=True,
+                limit_choices_to={"is_staff": True},
+                related_name="subscribed_jobs",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]
-
